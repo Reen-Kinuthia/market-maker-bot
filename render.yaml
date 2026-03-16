@@ -1,0 +1,19 @@
+services:
+  - type: web
+    name: market-maker-bot
+    runtime: python
+    region: oregon
+    plan: free
+    buildCommand: |
+      pip install -r requirements.txt
+      cd dashboard && npm install && npm run build
+    startCommand: uvicorn api.main:app --host 0.0.0.0 --port $PORT
+    envVars:
+      - key: DRY_RUN
+        value: "true"
+      - key: SYMBOL
+        value: "BTC/USDT"
+      - key: SPREAD
+        value: "0.002"
+      - key: LEVELS
+        value: "3"

@@ -8,8 +8,8 @@ export default function PriceChart({ priceHistory }) {
   const refSeriesRef = useRef(null)
   const bidSeriesRef = useRef(null)
   const askSeriesRef = useRef(null)
+  const targetSeriesRef = useRef(null)
 
-  // Init chart
   useEffect(() => {
     if (!containerRef.current) return
 
@@ -33,41 +33,27 @@ export default function PriceChart({ priceHistory }) {
         timeVisible: true,
         secondsVisible: true,
       },
-      handleScroll: true,
-      handleScale: true,
     })
 
     const midSeries = chart.addLineSeries({
-      color: '#e2e8f0',
-      lineWidth: 2,
-      title: 'Mid',
-      priceLineVisible: false,
-      lastValueVisible: true,
+      color: '#e2e8f0', lineWidth: 2, title: 'Mid',
+      priceLineVisible: false, lastValueVisible: true,
     })
-
     const refSeries = chart.addLineSeries({
-      color: '#3b9eff88',
-      lineWidth: 1,
-      lineStyle: 2, // dashed
-      title: 'Ref',
-      priceLineVisible: false,
-      lastValueVisible: false,
+      color: '#3b9eff88', lineWidth: 1, lineStyle: 2, title: 'Ref',
+      priceLineVisible: false, lastValueVisible: false,
     })
-
     const bidSeries = chart.addLineSeries({
-      color: '#00d4a066',
-      lineWidth: 1,
-      title: 'Bid',
-      priceLineVisible: false,
-      lastValueVisible: false,
+      color: '#00d4a066', lineWidth: 1, title: 'Bid',
+      priceLineVisible: false, lastValueVisible: false,
     })
-
     const askSeries = chart.addLineSeries({
-      color: '#ff4d6a66',
-      lineWidth: 1,
-      title: 'Ask',
-      priceLineVisible: false,
-      lastValueVisible: false,
+      color: '#ff4d6a66', lineWidth: 1, title: 'Ask',
+      priceLineVisible: false, lastValueVisible: false,
+    })
+    const targetSeries = chart.addLineSeries({
+      color: '#a78bfa', lineWidth: 1, lineStyle: 1, title: 'Target',
+      priceLineVisible: true, lastValueVisible: true,
     })
 
     chartRef.current = chart
@@ -75,6 +61,7 @@ export default function PriceChart({ priceHistory }) {
     refSeriesRef.current = refSeries
     bidSeriesRef.current = bidSeries
     askSeriesRef.current = askSeries
+    targetSeriesRef.current = targetSeries
 
     const ro = new ResizeObserver(() => {
       if (containerRef.current) {
@@ -86,35 +73,35 @@ export default function PriceChart({ priceHistory }) {
     })
     ro.observe(containerRef.current)
 
-    return () => {
-      ro.disconnect()
-      chart.remove()
-    }
+    return () => { ro.disconnect(); chart.remove() }
   }, [])
 
-  // Update data
   useEffect(() => {
-    if (!priceHistory?.length) return
-    if (!midSeriesRef.current) return
-
-    const toPoint = (p, key) => ({
-      time: Math.floor(p.t),
-      value: p[key],
-    })
+    if (!priceHistory?.length || !midSeriesRef.current) return
 
     const dedupe = (arr) => {
       const seen = new Set()
       return arr.filter(p => {
-        if (seen.has(p.time)) return false
+        if (!p || seen.has(p.time)) return false
         seen.add(p.time)
         return true
       }).sort((a, b) => a.time - b.time)
     }
 
+    const toPoint = (p, key) => ({ time: Math.floor(p.t), value: p[key] })
+
     midSeriesRef.current.setData(dedupe(priceHistory.map(p => toPoint(p, 'mid'))))
     refSeriesRef.current.setData(dedupe(priceHistory.map(p => toPoint(p, 'ref'))))
     bidSeriesRef.current.setData(dedupe(priceHistory.map(p => toPoint(p, 'bid'))))
     askSeriesRef.current.setData(dedupe(priceHistory.map(p => toPoint(p, 'ask'))))
+
+    // Target line — only draw points where target is set
+    const targetPoints = dedupe(
+      priceHistory
+        .filter(p => p.target != null)
+        .map(p => ({ time: Math.floor(p.t), value: p.target }))
+    )
+    targetSeriesRef.current.setData(targetPoints)
   }, [priceHistory])
 
   return (
@@ -123,9 +110,10 @@ export default function PriceChart({ priceHistory }) {
         <span>Price Chart</span>
         <div className="flex items-center gap-4 text-[9px]">
           <Legend color="#e2e8f0" label="Mid" />
-          <Legend color="#3b9eff" label="Ref Exchange" dashed />
+          <Legend color="#3b9eff" label="Ref" dashed />
           <Legend color="#00d4a0" label="Bid" />
           <Legend color="#ff4d6a" label="Ask" />
+          <Legend color="#a78bfa" label="Target" dotted />
         </div>
       </div>
       <div ref={containerRef} className="flex-1 min-h-0" />
@@ -133,13 +121,13 @@ export default function PriceChart({ priceHistory }) {
   )
 }
 
-function Legend({ color, label, dashed }) {
+function Legend({ color, label, dashed, dotted }) {
   return (
     <div className="flex items-center gap-1.5">
-      <div
-        className="w-4 h-px"
-        style={{ background: color, borderTop: dashed ? `1px dashed ${color}` : undefined }}
-      />
+      <div className="w-4 h-px" style={{
+        background: dashed || dotted ? 'transparent' : color,
+        borderTop: dashed ? `1px dashed ${color}` : dotted ? `1px dotted ${color}` : undefined,
+      }} />
       <span style={{ color }}>{label}</span>
     </div>
   )

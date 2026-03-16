@@ -163,7 +163,15 @@ async def update_config(body: dict):
     global _config, _sim
     _config.update(body)
 
-    # Rebuild simulator with new params
+    raw_target = _config.get("target_price")
+    target_price = float(raw_target) if raw_target else None
+
+    # If only target_price changed, update in place (no reset)
+    if list(body.keys()) == ["target_price"]:
+        _sim.set_target_price(target_price)
+        return {"ok": True, "config": _config}
+
+    # Full rebuild for other param changes
     symbol = _config.get("symbol", "BTC/USDT")
     current_mid = _sim._mid
     _sim = MarketSimulator(
@@ -174,8 +182,20 @@ async def update_config(body: dict):
         level_spacing=float(_config.get("level_spacing", 0.001)),
         base_order_size=float(_config.get("order_size", 0.001)),
         size_multiplier=float(_config.get("level_size_multiplier", 1.5)),
+        target_price=target_price,
     )
     return {"ok": True, "config": _config}
+
+
+@app.post("/api/target-price")
+async def set_target_price(body: dict):
+    """Quick endpoint — just update target price without full config rebuild."""
+    global _config
+    raw = body.get("price")
+    price = float(raw) if raw else None
+    _config["target_price"] = price
+    _sim.set_target_price(price)
+    return {"ok": True, "target_price": price}
 
 
 # ────────────────────────────────────────────────────

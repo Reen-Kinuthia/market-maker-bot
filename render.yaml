@@ -1,12 +1,10 @@
 services:
   - type: web
-    name: market-maker-bot
+    name: market-maker-api
     runtime: python
     region: oregon
     plan: free
-    buildCommand: |
-      pip install -r requirements.txt
-      cd dashboard && npm install && npm run build
+    buildCommand: pip install -r requirements.txt
     startCommand: uvicorn api.main:app --host 0.0.0.0 --port $PORT
     envVars:
       - key: DRY_RUN
@@ -17,3 +15,6 @@ services:
         value: "0.002"
       - key: LEVELS
         value: "3"
+      # Allow requests from Netlify frontend
+      - key: ALLOWED_ORIGIN
+        value: "https://your-site.netlify.app"

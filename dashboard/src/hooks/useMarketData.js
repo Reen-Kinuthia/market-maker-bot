@@ -1,6 +1,11 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
 
-const WS_URL = `${window.location.protocol === 'https:' ? 'wss' : 'ws'}://${window.location.host}/ws`
+// In production (Netlify), VITE_API_URL points to the Render backend.
+// In development, falls back to same-origin (proxied by Vite).
+const _apiBase = import.meta.env.VITE_API_URL ?? ''
+const WS_URL = _apiBase
+  ? `${_apiBase.replace(/^http/, 'ws')}/ws`
+  : `${window.location.protocol === 'https:' ? 'wss' : 'ws'}://${window.location.host}/ws`
 const RECONNECT_DELAY = 2000
 
 export function useMarketData() {
@@ -49,15 +54,15 @@ export function useMarketData() {
   }, [connect])
 
   const startBot = useCallback(async () => {
-    await fetch('/api/bot/start', { method: 'POST' })
+    await fetch(`${_apiBase}/api/bot/start`, { method: 'POST' })
   }, [])
 
   const stopBot = useCallback(async () => {
-    await fetch('/api/bot/stop', { method: 'POST' })
+    await fetch(`${_apiBase}/api/bot/stop`, { method: 'POST' })
   }, [])
 
   const updateConfig = useCallback(async (config) => {
-    await fetch('/api/config', {
+    await fetch(`${_apiBase}/api/config`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(config),

@@ -14,6 +14,7 @@ from __future__ import annotations
 import asyncio
 import json
 import logging
+import os
 from contextlib import asynccontextmanager
 from pathlib import Path
 from typing import Set
@@ -106,9 +107,11 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(title="Market Maker Dashboard API", lifespan=lifespan)
 
+_allowed_origin = os.getenv("ALLOWED_ORIGIN", "*")
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=[_allowed_origin] if _allowed_origin != "*" else ["*"],
+    allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
